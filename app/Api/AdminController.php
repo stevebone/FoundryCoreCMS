@@ -41,6 +41,42 @@ class AdminController
                 return ['err' => 'err_invalid'];
             }
             $out += ['app.name' => $name, 'app.theme' => $theme, 'app.default_lang' => $lang];
+
+            // Optional site-wide page background (empty = theme.json default).
+            if (array_key_exists('site_bg', $in)) {
+                $bg = trim((string) $in['site_bg']);
+                if ($bg !== '' && !isset(Theme::backgrounds()[$bg])) {
+                    return ['err' => 'err_invalid_bg'];
+                }
+                $out['theme.bg'] = $bg === '' ? null : $bg;
+            }
+
+            // Optional site favicon (empty = img/favicon.svg default).
+            if (array_key_exists('site_favicon', $in)) {
+                $fav = trim((string) $in['site_favicon']);
+                if ($fav !== '' && !isset(Theme::favicons()[$fav])) {
+                    return ['err' => 'err_invalid_bg'];
+                }
+                $out['theme.favicon'] = $fav === '' ? null : $fav;
+            }
+
+            // Optional hero logo (empty = img/favicon.svg default).
+            if (array_key_exists('site_logo', $in)) {
+                $logo = trim((string) $in['site_logo']);
+                if ($logo !== '' && !isset(Theme::logos()[$logo])) {
+                    return ['err' => 'err_invalid_bg'];
+                }
+                $out['theme.logo'] = $logo === '' ? null : $logo;
+            }
+
+            // Optional home hero emblem (empty = img/favicon.svg default).
+            if (array_key_exists('site_hero', $in)) {
+                $hero = trim((string) $in['site_hero']);
+                if ($hero !== '' && !isset(Theme::heroes()[$hero])) {
+                    return ['err' => 'err_invalid_bg'];
+                }
+                $out['theme.hero'] = $hero === '' ? null : $hero;
+            }
         }
 
         // Footer section posted by the admin form (f_footer sentinel marks it;
@@ -65,9 +101,14 @@ class AdminController
             }
         }
 
-        // API callers may pass footer.* keys directly.
+        // Database tab posted by the admin form.
+        if (isset($in['f_db'])) {
+            $out['db.enabled'] = isset($in['f_db_enabled']) ? '1' : '0';
+        }
+
+        // API callers may pass footer.*/db.* keys directly.
         foreach ($in as $k => $v) {
-            if (!str_starts_with($k, 'footer.')) {
+            if (!str_starts_with($k, 'footer.') && !str_starts_with($k, 'db.')) {
                 continue;
             }
             if (str_ends_with($k, '.title') || preg_match('#^footer\.social\..+#', $k)) {

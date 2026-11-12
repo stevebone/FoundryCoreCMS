@@ -2,7 +2,7 @@
     <div class="bar-top">
         <div class="container bar-top-inner">
             <a class="brand-mark" href="<?= url('/') ?>">
-                <img src="<?= e(asset('img/favicon.svg')) ?>" alt="" class="logo-icon">
+                <img src="<?= e(asset(App\Core\Theme::favicon())) ?>" alt="" class="logo-icon">
                 <span><?= e(config('app.name')) ?></span>
             </a>
             <nav class="bar-top-nav">
@@ -68,7 +68,19 @@
                 <a href="<?= url('/#editions') ?>"><?= t('nav.game_info') ?></a>
                 <a href="<?= url('/#news') ?>"><?= t('nav.news') ?></a>
                 <a href="<?= url('/#forums') ?>"><?= t('nav.forums') ?></a>
-                <a href="<?= url('/#community') ?>"><?= t('nav.community') ?></a>
+                <?php if (App\Core\Database::allowed()): ?>
+                    <div class="dropdown nav-dropdown">
+                        <button type="button" class="dropdown-btn nav-drop-btn" aria-haspopup="true">
+                            <?= t('nav.database') ?> &#9662;
+                        </button>
+                        <div class="dropdown-menu nav-menu">
+                            <a href="<?= url('/db/items') ?>"><?= t('db.items') ?></a>
+                            <a href="<?= url('/db/quests') ?>"><?= t('db.quests') ?></a>
+                            <a href="<?= url('/db/creatures') ?>"><?= t('db.creatures') ?></a>
+                            <a href="<?= url('/db/objects') ?>"><?= t('db.objects') ?></a>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </nav>
             <a class="btn btn-gold btn-cta" href="<?= url('/#cta') ?>"><?= t('nav.play') ?></a>
         </div>

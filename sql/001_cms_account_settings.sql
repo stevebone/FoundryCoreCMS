@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `cms`.`account_settings` (
     `battlenet_account` INT UNSIGNED NOT NULL,
     `lang`            VARCHAR(8)  NULL DEFAULT NULL,
     `theme`           VARCHAR(32) NULL DEFAULT NULL,
+    `bg`              VARCHAR(64) NULL DEFAULT NULL,
     `timezone`        VARCHAR(64) NULL DEFAULT NULL,
     `updated_at`      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`battlenet_account`),

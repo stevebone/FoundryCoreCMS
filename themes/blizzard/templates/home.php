@@ -1,7 +1,10 @@
 <section class="hero">
     <div class="hero-bg"></div>
+    <?php if ($heroArt = App\Core\Theme::hero()): ?>
+        <div class="hero-art" style="--hero-img:url('<?= e(asset($heroArt)) ?>')"></div>
+    <?php endif; ?>
     <div class="container hero-inner">
-        <img class="hero-emblem" src="<?= e(asset('img/favicon.svg')) ?>" alt="">
+        <img class="hero-logo" src="<?= e(asset(App\Core\Theme::logo())) ?>" alt="">
         <h1 class="hero-title"><?= t('hero.title') ?></h1>
         <p class="hero-sub"><?= t('hero.subtitle') ?></p>
         <div class="hero-cta">

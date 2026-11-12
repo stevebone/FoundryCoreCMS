@@ -100,10 +100,10 @@ document.addEventListener('change', function (e) {
     }
 })();
 
-// Armory: item tooltips. Hover an [data-item] name -> fetch tooltip payload
-// once per entry, render the WoW-style floating box next to the cursor.
+// Armory + DB: item tooltips. Hover a [data-item] element -> fetch tooltip
+// payload once per entry, render the WoW-style floating box next to cursor.
 (function () {
-    const page = document.querySelector('.armory-page');
+    const page = document.querySelector('.armory-page, .db-page');
     if (!page) return;
 
     // Paired tooltip: icon box + stats box side by side (warcraftdb style).
@@ -186,27 +186,261 @@ document.addEventListener('change', function (e) {
         tip.style.top = y + 'px';
     }
 
+    let activeEntry = null;
+    let hoverEl = null;
+    const hide = () => { tip.hidden = true; activeEntry = null; hoverEl = null; };
+
+    // Last-resort guard: :hover is browser ground truth — if the pointer left
+    // the element by any path, the tip dies within this interval.
+    setInterval(function () {
+        if (!tip.hidden && (!hoverEl || !hoverEl.matches(':hover'))) {
+            hide();
+        }
+    }, 200);
+
     document.addEventListener('mouseover', function (e) {
         const el = e.target.closest('[data-item]');
-        if (!el || !page.contains(el)) return;
+        if (!el || !page.contains(el)) {
+            // Pointer moved outside any item element — hide unconditionally.
+            if (!tip.hidden) hide();
+            return;
+        }
         const entry = el.dataset.item;
+        // Same item, pointer moved between its children — just reposition.
+        if (entry === activeEntry && !tip.hidden) { move(e); return; }
+        activeEntry = entry;
+        hoverEl = el;
         tip.hidden = false;
         move(e);
-        if (cache[entry]) { cache[entry].then(d => { if (d) render(d); }); return; }
+        const show = d => {
+            if (entry !== activeEntry || tip.hidden) return;
+            if (d) render(d); else hide();
+        };
+        if (cache[entry]) { cache[entry].then(show); return; }
         iconBox.hidden = true;
         statsBox.innerHTML = '<div class="tt-muted">' + esc((window.AR_TT || {}).loading || 'Loading...') + '</div>';
         cache[entry] = fetch('/api/armory/item?entry=' + encodeURIComponent(entry))
             .then(r => r.ok ? r.json() : null)
             .then(d => (d && d.data && d.data.item) || null)
             .catch(() => null);
-        cache[entry].then(d => { if (d && !tip.hidden) render(d); });
+        cache[entry].then(show);
     });
 
-    document.addEventListener('mousemove', e => { if (!tip.hidden) move(e); });
+    document.addEventListener('mousemove', function (e) {
+        if (tip.hidden) return;
+        // Bulletproof hide: hit-test what is ACTUALLY under the cursor —
+        // hides no matter which event-target edge case failed to fire.
+        const under = document.elementFromPoint(e.clientX, e.clientY);
+        const el = under && under.closest ? under.closest('[data-item]') : null;
+        if (!el || !page.contains(el) || el.dataset.item !== activeEntry) {
+            hide();
+            return;
+        }
+        move(e);
+    });
     document.addEventListener('mouseout', function (e) {
         const el = e.target.closest('[data-item]');
         // Stay open when moving between children of the same item link.
-        if (el && !(e.relatedTarget && el.contains(e.relatedTarget))) tip.hidden = true;
+        if (el && !(e.relatedTarget && el.contains(e.relatedTarget))) {
+            hide();
+        }
     });
-    document.addEventListener('scroll', () => { tip.hidden = true; }, { passive: true });
+    ['scroll', 'wheel', 'pointerdown', 'contextmenu'].forEach(ev =>
+        document.addEventListener(ev, hide, { passive: true }));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+    window.addEventListener('blur', hide);
 })();
+
+// Autocomplete for [data-ac] inputs: debounced fetch -> positioned dropdown.
+// data-ac = endpoint; data-ac-goto = URL template ("...{id}") to navigate to on pick,
+// otherwise the picked value fills the input and submits the form.
+(function () {
+    let box = null, items = [], sel = -1, acInput = null, timer = null;
+
+    function closeBox() {
+        if (box) { box.remove(); box = null; }
+        items = []; sel = -1; acInput = null;
+    }
+
+    function pick(i) {
+        const it = items[i];
+        if (it === undefined || !acInput) return;
+        const inp = acInput, form = inp.form;
+        const gotoT = inp.dataset.acGoto;
+        if (gotoT && it.id !== undefined) {
+            window.location.href = gotoT.replace('{id}', encodeURIComponent(it.id));
+            return;
+        }
+        inp.value = typeof it === 'string' ? it : (it.name || '');
+        closeBox();
+        if (form) form.submit();
+    }
+
+    function noteRow(text) {
+        const row = document.createElement('div');
+        row.className = 'db-ac-note';
+        row.textContent = text;
+        return row;
+    }
+
+    // Render the dropdown anchored inside the input's .db-ac wrapper so it
+    // always lands directly under the box (falls back to body positioning).
+    function showBox(input, fill) {
+        if (box) box.remove();
+        acInput = input;
+        box = document.createElement('div');
+        box.className = 'db-ac-list';
+        fill(box);
+        const wrap = input.closest('.db-ac');
+        if (wrap) {
+            wrap.appendChild(box);
+        } else {
+            document.body.appendChild(box);
+            const r = input.getBoundingClientRect();
+            box.style.left = (r.left + window.scrollX) + 'px';
+            box.style.top = (r.bottom + window.scrollY + 2) + 'px';
+            box.style.minWidth = r.width + 'px';
+        }
+    }
+
+    function openBox(input, list) {
+        items = list; sel = -1;
+        showBox(input, b => {
+            list.forEach((it, i) => {
+                const row = document.createElement('div');
+                row.className = 'db-ac-item';
+                row.textContent = typeof it === 'string' ? it : (it.name + (it.id ? '  (#' + it.id + ')' : ''));
+                row.addEventListener('pointerdown', e => { e.preventDefault(); pick(i); });
+                b.appendChild(row);
+            });
+        });
+    }
+
+    function trigger(inp) {
+        clearTimeout(timer);
+        const q = inp.value.trim();
+        if (q.length < 1) { closeBox(); return; }
+        showBox(inp, b => b.appendChild(noteRow('Searching…')));
+        timer = setTimeout(async () => {
+            try {
+                const r = await fetch(inp.dataset.ac + '?q=' + encodeURIComponent(q));
+                const j = r.ok ? await r.json() : null;
+                if (document.activeElement !== inp || !j || !j.data) return;
+                if (j.data.length) openBox(inp, j.data);
+                else showBox(inp, b => b.appendChild(noteRow('No matches')));
+            } catch (_) { /* ignore */ }
+        }, 200);
+    }
+
+    document.addEventListener('input', function (e) {
+        const inp = e.target.closest && e.target.closest('input[data-ac]');
+        if (inp) trigger(inp);
+    });
+
+    document.addEventListener('focusin', function (e) {
+        const inp = e.target.closest && e.target.closest('input[data-ac]');
+        if (inp && inp.value.trim().length >= 1) trigger(inp);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (!box || !acInput || e.target !== acInput) return;
+        const rows = box.querySelectorAll('.db-ac-item');
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!items.length) return;
+            sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+            rows.forEach((n, i) => n.classList.toggle('sel', i === sel));
+        } else if (e.key === 'Enter' && sel >= 0) {
+            e.preventDefault();
+            pick(sel);
+        } else if (e.key === 'Escape') {
+            closeBox();
+        }
+    });
+
+    document.addEventListener('pointerdown', function (e) {
+        if (box && !box.contains(e.target) && e.target !== acInput) closeBox();
+    });
+    window.addEventListener('blur', closeBox);
+    document.addEventListener('scroll', function (e) {
+        if (box && !(e.target instanceof Node && box.contains(e.target))) closeBox();
+    }, true);
+})();
+
+// Quest objective map: click the thumbnail -> lightbox with the full map.
+document.addEventListener('click', function (e) {
+    const canvas = e.target.closest('[data-map-zoom]');
+    if (!canvas) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'db-map-modal';
+    overlay.innerHTML = '<div class="db-map-modal-box">'
+        + '<button type="button" class="db-map-close" aria-label="Close">&times;</button>'
+        + canvas.innerHTML
+        + '</div>';
+    const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = ev => { if (ev.key === 'Escape') close(); };
+    overlay.addEventListener('click', ev => {
+        if (ev.target === overlay || ev.target.closest('.db-map-close')) close();
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+});
+document.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches
+        && e.target.matches('[data-map-zoom]')) {
+        e.preventDefault();
+        e.target.click();
+    }
+});
+
+// DB pages: "+ Add filter" style buttons toggle a panel via data-panel="#id"
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-panel]');
+    if (!btn) return;
+    const target = document.querySelector(btn.dataset.panel);
+    if (target) target.classList.toggle('is-hidden');
+});
+
+// DB items: Columns menu checkboxes toggle table cells via data-colcell.
+document.addEventListener('change', function (e) {
+    const cb = e.target.closest('[data-col]');
+    if (!cb) return;
+    document.querySelectorAll('[data-colcell="' + cb.dataset.col + '"]')
+        .forEach(cell => { cell.hidden = !cb.checked; });
+});
+
+// DB item page: relation tabs (Disenchants / Reward From / Dropped By / ...)
+document.addEventListener('click', function (e) {
+    const tab = e.target.closest('.db-rel-tab[data-rt]');
+    if (!tab) return;
+    document.querySelectorAll('.db-rel-tab').forEach(t =>
+        t.classList.toggle('active', t === tab));
+    document.querySelectorAll('[data-rpanel]').forEach(p =>
+        p.classList.toggle('is-hidden', p.dataset.rpanel !== tab.dataset.rt));
+});
+
+// Admin pickers: a select[data-preview="#img"] shows a live thumbnail of the
+// picked file; data-base is the folder URL prefix, data-fallback the default.
+document.addEventListener('change', function (e) {
+    const sel = e.target.closest && e.target.closest('select[data-preview]');
+    if (!sel) return;
+    const img = document.querySelector(sel.dataset.preview);
+    if (!img) return;
+    img.src = sel.value ? sel.dataset.base + sel.value : sel.dataset.fallback;
+});
+
+// DB item page: Copy Link button
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    const done = () => {
+        const orig = btn.textContent;
+        btn.textContent = btn.dataset.copied || 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    };
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(location.href).then(done).catch(done);
+    } else {
+        done();
+    }
+});

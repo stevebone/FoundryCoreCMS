@@ -12,7 +12,7 @@ use PDO;
 class Settings
 {
     /** Columns that may be written through save(). */
-    private const KEYS = ['lang', 'theme', 'timezone'];
+    private const KEYS = ['lang', 'theme', 'bg', 'timezone'];
 
     /** @var array<int, ?array> */
     private static array $cache = [];
@@ -22,7 +22,7 @@ class Settings
     {
         if (!array_key_exists($bnetId, self::$cache)) {
             $stmt = Db::cms()->prepare(
-                'SELECT lang, theme, timezone FROM account_settings WHERE battlenet_account = ?'
+                'SELECT lang, theme, bg, timezone FROM account_settings WHERE battlenet_account = ?'
             );
             $stmt->execute([$bnetId]);
             self::$cache[$bnetId] = $stmt->fetch() ?: null;

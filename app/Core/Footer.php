@@ -23,11 +23,13 @@ class Footer
                 ],
             ],
             2 => [
-                'title_key' => 'footer.col_community',
+                'title_key' => 'footer.col_database',
+                'db_only'   => true,
                 'links' => [
-                    ['t' => 'nav.forums', 'url' => '/#forums'],
-                    ['t' => 'nav.community', 'url' => '/#community'],
-                    ['t' => 'footer.link_rules', 'url' => '#'],
+                    ['t' => 'db.items', 'url' => '/db/items'],
+                    ['t' => 'db.quests', 'url' => '/db/quests'],
+                    ['t' => 'db.creatures', 'url' => '/db/creatures'],
+                    ['t' => 'db.objects', 'url' => '/db/objects'],
                 ],
             ],
             3 => [

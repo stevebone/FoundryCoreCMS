@@ -139,9 +139,27 @@ class Wow
         return self::lookup('bonding', self::BONDING, $id, '');
     }
 
+    /** Expansion display names keyed by quest_template.Expansion. */
+    public const EXPANSIONS = [
+        0 => 'Classic', 1 => 'The Burning Crusade', 2 => 'Wrath of the Lich King',
+        3 => 'Cataclysm', 4 => 'Mists of Pandaria', 5 => 'Warlords of Draenor',
+        6 => 'Legion', 7 => 'Battle for Azeroth', 8 => 'Shadowlands',
+        9 => 'Dragonflight', 10 => 'The War Within', 11 => 'Midnight',
+    ];
+
+    public static function expansionName(int $id): ?string
+    {
+        return self::EXPANSIONS[$id] ?? null; // -1/-2 = legacy/current → null
+    }
+
     public static function qualityClass(?int $id): string
     {
         return 'q-' . (self::QUALITY[$id ?? 1] ?? 'common');
+    }
+
+    public static function qualityName(?int $id): string
+    {
+        return self::lookup('quality', self::QUALITY, $id ?? 1, '');
     }
 
     /**

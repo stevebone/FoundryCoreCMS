@@ -50,6 +50,22 @@ const TABLES = [
     'ChrRaces'              => 'chr_races',
     'ChrClasses'            => 'chr_classes',
     'CharTitles'            => 'char_titles',
+    'AreaTable'             => 'area_table',
+    'QuestSort'             => 'quest_sort',
+    'QuestInfo'             => 'quest_info',
+    'ContentTuning'         => 'content_tuning',
+    'Faction'               => 'faction',
+    'QuestXP'               => 'quest_xp',
+    'UiMap'                 => 'ui_map',
+    'UiMapAssignment'       => 'ui_map_assignment',
+    'FactionTemplate'       => 'faction_template',
+];
+
+// Non-ID columns the app filters/joins on (added after import alongside the PK).
+const EXTRA_INDEXES = [
+    'item_modified_appearance' => 'ADD INDEX idx_ima_item (ItemID, ItemAppearanceModifierID)',
+    'item_sub_class'           => 'ADD INDEX idx_isc_lookup (ClassID, SubClassID)',
+    'item_class'               => 'ADD INDEX idx_ic_class (ClassID)',
 ];
 
 // Optional second arg: only import these db2 table names (comma-separated).
@@ -87,10 +103,13 @@ function colType(array $samples): string
     return $int ? 'BIGINT' : 'DOUBLE';
 }
 
+// First pass: pick the newest build per table (glob order is not reliable
+// when multiple exports of the same db2 exist side by side).
 $done = $skipped = 0;
+$files = [];
 foreach (glob(rtrim($dir, '/\\') . '/*.csv') as $file) {
     $base = basename($file);
-    if (str_contains($base, '(1)') || !preg_match('/^(\w+)\.[\d.]+\.csv$/', $base, $m)) {
+    if (str_contains($base, '(1)') || !preg_match('/^(\w+)\.([\d.]+)\.csv$/', $base, $m)) {
         continue; // duplicate downloads / artifacts
     }
     $table = TABLES[$m[1]] ?? null;
@@ -98,6 +117,11 @@ foreach (glob(rtrim($dir, '/\\') . '/*.csv') as $file) {
         $skipped++;
         continue;
     }
+    if (!isset($files[$table]) || version_compare($m[2], $files[$table][1], '>')) {
+        $files[$table] = [$file, $m[2]];
+    }
+}
+foreach ($files as $table => [$file, $ver]) {
 
     $fh = fopen($file, 'rb');
     $header = fgetcsv($fh, escape: '');
@@ -180,7 +204,17 @@ foreach (glob(rtrim($dir, '/\\') . '/*.csv') as $file) {
     if (in_array('ID', $cols, true)) {
         $pdo->exec("ALTER TABLE `{$table}` ADD PRIMARY KEY (`ID`)");
     }
+    if (isset(EXTRA_INDEXES[$table])) {
+        $pdo->exec("ALTER TABLE `{$table}` " . EXTRA_INDEXES[$table]);
+    }
     echo str_pad($table, 28) . number_format($inserted) . " rows\n";
     $done++;
 }
 echo "Imported $done tables ($skipped non-whitelisted files skipped).\n";
+
+// Rebuild the db-browse index when item tables were (re)imported.
+if ($done && ($only === null || array_intersect(array_keys($only),
+        ['Item', 'ItemSparse', 'ItemSearchName', 'ItemModifiedAppearance', 'ItemAppearance']))) {
+    require dirname(__DIR__) . '/app/bootstrap.php';
+    echo 'db_item_index rebuilt: ' . number_format(App\Core\Database::rebuildIndex()) . " rows\n";
+}

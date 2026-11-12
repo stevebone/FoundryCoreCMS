@@ -29,6 +29,16 @@
                     <?php endforeach; ?>
                 </select>
 
+                <label class="auth-label" for="bg"><?= t('settings.background') ?></label>
+                <select class="auth-input" id="bg" name="bg">
+                    <option value=""><?= t('settings.default') ?></option>
+                    <?php foreach ($backgrounds as $file => $label): ?>
+                        <option value="<?= e($file) ?>" <?= ($prefs['bg'] ?? null) === $file ? 'selected' : '' ?>>
+                            <?= e($label) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+
                 <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('settings.save') ?></button>
             </form>
         </div>

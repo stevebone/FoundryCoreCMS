@@ -1,5 +1,5 @@
 -- 003_cms_item_tables.sql
--- db2 CSV-import tables for the armory (names/tooltips/icons/armor/damage).
+-- db2 CSV-import tables for the armory + db browser.
 -- Recreated+populated by: php tools/import_db2_csv.php <csv-dir>
 
 DROP TABLE IF EXISTS `char_titles`;
@@ -213,7 +213,8 @@ CREATE TABLE `item_class` (
   `ClassID` bigint DEFAULT NULL,
   `PriceModifier` double DEFAULT NULL,
   `Flags` bigint DEFAULT NULL,
-  PRIMARY KEY (`ID`)
+  PRIMARY KEY (`ID`),
+  KEY `idx_ic_class` (`ClassID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `item_damage_one_hand`;
@@ -338,7 +339,8 @@ CREATE TABLE `item_modified_appearance` (
   `OrderIndex` bigint DEFAULT NULL,
   `TransmogSourceTypeEnum` bigint DEFAULT NULL,
   `Flags` bigint DEFAULT NULL,
-  PRIMARY KEY (`ID`)
+  PRIMARY KEY (`ID`),
+  KEY `idx_ima_item` (`ItemID`,`ItemAppearanceModifierID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `item_name_description`;
@@ -533,7 +535,8 @@ CREATE TABLE `item_sub_class` (
   `DisplayFlags` bigint DEFAULT NULL,
   `WeaponSwingSize` bigint DEFAULT NULL,
   `PostrequisiteProficiency` bigint DEFAULT NULL,
-  PRIMARY KEY (`ID`)
+  PRIMARY KEY (`ID`),
+  KEY `idx_isc_lookup` (`ClassID`,`SubClassID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `item_x_item_effect`;

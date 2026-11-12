@@ -8,6 +8,8 @@
                href="<?= url('/admin/settings?tab=main') ?>"><?= t('admin.tab_main') ?></a>
             <a class="admin-tab <?= $tab === 'footer' ? 'active' : '' ?>"
                href="<?= url('/admin/settings?tab=footer') ?>"><?= t('admin.tab_footer') ?></a>
+            <a class="admin-tab <?= $tab === 'database' ? 'active' : '' ?>"
+               href="<?= url('/admin/settings?tab=database') ?>"><?= t('admin.tab_database') ?></a>
         </nav>
 
         <?php if (!empty($saved)): ?>
@@ -30,6 +32,74 @@
                         <?php endforeach; ?>
                     </select>
 
+                    <?php
+                    $bgMeta = App\Core\Theme::meta()['background'] ?? 'img/mainBG.avif';
+                    $bgCur = $bgDefault !== '' ? 'img/bg/' . $bgDefault : $bgMeta;
+                    ?>
+                    <label class="auth-label" for="site_bg"><?= t('admin.site_bg') ?></label>
+                    <div class="admin-pick">
+                        <select class="auth-input" id="site_bg" name="site_bg"
+                                data-preview="#pv_bg" data-base="<?= e(asset('img/bg/')) ?>"
+                                data-fallback="<?= e(asset($bgMeta)) ?>">
+                            <option value=""><?= t('admin.bg_default') ?></option>
+                            <?php foreach ($backgrounds as $file => $label): ?>
+                                <option value="<?= e($file) ?>" <?= $bgDefault === $file ? 'selected' : '' ?>>
+                                    <?= e($label) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <img class="admin-preview admin-preview-wide" id="pv_bg"
+                             src="<?= e(asset($bgCur)) ?>" alt="">
+                    </div>
+
+                    <label class="auth-label" for="site_logo"><?= t('admin.site_logo') ?></label>
+                    <div class="admin-pick">
+                        <select class="auth-input" id="site_logo" name="site_logo"
+                                data-preview="#pv_logo" data-base="<?= e(asset('img/logo/')) ?>"
+                                data-fallback="<?= e(asset('img/favicon.svg')) ?>">
+                            <option value=""><?= t('admin.logo_default') ?></option>
+                            <?php foreach ($logos as $file => $label): ?>
+                                <option value="<?= e($file) ?>" <?= $logoDefault === $file ? 'selected' : '' ?>>
+                                    <?= e($label) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <img class="admin-preview" id="pv_logo"
+                             src="<?= e(asset(App\Core\Theme::logo())) ?>" alt="">
+                    </div>
+
+                    <label class="auth-label" for="site_favicon"><?= t('admin.site_favicon') ?></label>
+                    <div class="admin-pick">
+                        <select class="auth-input" id="site_favicon" name="site_favicon"
+                                data-preview="#pv_favicon" data-base="<?= e(asset('img/favicon/')) ?>"
+                                data-fallback="<?= e(asset('img/favicon.svg')) ?>">
+                            <option value=""><?= t('admin.favicon_default') ?></option>
+                            <?php foreach ($favicons as $file => $label): ?>
+                                <option value="<?= e($file) ?>" <?= $faviconDefault === $file ? 'selected' : '' ?>>
+                                    <?= e($label) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <img class="admin-preview" id="pv_favicon"
+                             src="<?= e(asset(App\Core\Theme::favicon())) ?>" alt="">
+                    </div>
+
+                    <label class="auth-label" for="site_hero"><?= t('admin.site_hero') ?></label>
+                    <div class="admin-pick">
+                        <select class="auth-input" id="site_hero" name="site_hero"
+                                data-preview="#pv_hero" data-base="<?= e(asset('img/hero/')) ?>"
+                                data-fallback="<?= e(asset('img/favicon.svg')) ?>">
+                            <option value=""><?= t('admin.hero_default') ?></option>
+                            <?php foreach ($heroes as $file => $label): ?>
+                                <option value="<?= e($file) ?>" <?= $heroDefault === $file ? 'selected' : '' ?>>
+                                    <?= e($label) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <img class="admin-preview" id="pv_hero"
+                             src="<?= e(asset(App\Core\Theme::hero() ?? 'img/favicon.svg')) ?>" alt="">
+                    </div>
+
                     <label class="auth-label" for="default_lang"><?= t('admin.default_lang') ?></label>
                     <select class="auth-input" id="default_lang" name="default_lang">
                         <?php foreach ($languages as $code): ?>
@@ -38,6 +108,21 @@
                             </option>
                         <?php endforeach; ?>
                     </select>
+
+                    <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.save') ?></button>
+                </form>
+            </div>
+        <?php elseif ($tab === 'database'): ?>
+            <div class="admin-card slim">
+                <form method="post" action="<?= url('/admin/settings') ?>" class="auth-form">
+                    <input type="hidden" name="f_db" value="1">
+
+                    <h2 class="admin-section-title admin-section-first"><?= t('admin.tab_database') ?></h2>
+                    <label class="check-row">
+                        <input type="checkbox" name="f_db_enabled"
+                               <?= App\Core\Database::enabled() ? 'checked' : '' ?>>
+                        <span><?= t('admin.db_enable') ?></span>
+                    </label>
 
                     <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.save') ?></button>
                 </form>

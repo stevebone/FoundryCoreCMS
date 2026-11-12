@@ -41,7 +41,8 @@ class SettingsController
     public static function validate(array $in): array
     {
         $prefs = [];
-        foreach (['lang' => Lang::available(), 'theme' => Theme::available()] as $key => $allowed) {
+        foreach (['lang' => Lang::available(), 'theme' => Theme::available(),
+                  'bg' => array_keys(Theme::backgrounds())] as $key => $allowed) {
             if (!array_key_exists($key, $in)) {
                 continue;
             }

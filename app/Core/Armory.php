@@ -219,13 +219,16 @@ class Armory
         $stmt->execute([$entry]);
         $item = $stmt->fetch() ?: [];
 
-        $subName = null;
+        $subName = $className = null;
         if ($item) {
             $stmt = $cms->prepare(
                 'SELECT DisplayName_lang FROM item_sub_class WHERE ClassID = ? AND SubClassID = ?'
             );
             $stmt->execute([(int) $item['ClassID'], (int) $item['SubclassID']]);
             $subName = $stmt->fetchColumn() ?: null;
+            $stmt = $cms->prepare('SELECT ClassName_lang FROM item_class WHERE ClassID = ?');
+            $stmt->execute([(int) $item['ClassID']]);
+            $className = $stmt->fetchColumn() ?: null;
         }
 
         // Weapon damage: damage tables are ilvl scaling rows; the value for
@@ -340,6 +343,7 @@ class Armory
             'ilvl' => $ilvl,
             'invType' => Wow::invTypeName($invType),
             'subclass' => $subName,
+            'class' => $className,
             'bonding' => Wow::bondingName((int) ($s['Bonding'] ?? 0)),
             'requiredLevel' => (int) ($s['RequiredLevel'] ?? 0),
             'allowableClass' => self::classMask((int) ($s['AllowableClass'] ?? 0)),

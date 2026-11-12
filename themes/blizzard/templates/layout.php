@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($title ?? t('meta.title')) ?></title>
-<link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
+<link rel="icon" href="<?= e(asset(App\Core\Theme::favicon())) ?>" type="<?= e(App\Core\Theme::faviconMime(App\Core\Theme::favicon())) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">

@@ -24,6 +24,21 @@ class Router
         }
 
         $handler = $this->routes[$method][$path] ?? null;
+        $params = [];
+        if ($handler === null) {
+            // Fall back to {param} patterns, e.g. /db/item/{id}.
+            foreach ($this->routes[$method] ?? [] as $pattern => $h) {
+                if (!str_contains($pattern, '{')) {
+                    continue;
+                }
+                $re = '#^' . preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pattern) . '$#';
+                if (preg_match($re, $path, $m)) {
+                    $handler = $h;
+                    $params = array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY);
+                    break;
+                }
+            }
+        }
         if ($handler === null) {
             if (str_starts_with($path, '/api/')) {
                 self::json(['error' => 'Not found'], 404);
@@ -33,7 +48,7 @@ class Router
             return;
         }
 
-        $handler();
+        $handler($params);
     }
 
     public static function json(mixed $data, int $status = 200): void

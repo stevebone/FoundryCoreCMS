@@ -14,7 +14,7 @@
         <?php endif; ?>
         <div class="footer-cols">
             <?php foreach (App\Core\Footer::columns() as $n => $col): ?>
-                <?php if (!App\Core\Footer::colOn($n)) {
+                <?php if (!App\Core\Footer::colOn($n) || (!empty($col['db_only']) && !App\Core\Database::allowed())) {
                     continue;
                 } ?>
                 <div class="fcol">

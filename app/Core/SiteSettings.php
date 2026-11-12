@@ -8,12 +8,14 @@ namespace App\Core;
  */
 class SiteSettings
 {
-    /** Keys the admin panel is allowed to write (footer.* prefix is also allowed). */
-    public const EDITABLE = ['app.name', 'app.theme', 'app.default_lang'];
+    /** Keys the admin panel is allowed to write (footer and db prefixes are also allowed). */
+    public const EDITABLE = ['app.name', 'app.theme', 'app.default_lang', 'theme.bg', 'theme.favicon', 'theme.hero', 'theme.logo'];
 
     private static function allowed(string $key): bool
     {
-        return in_array($key, self::EDITABLE, true) || str_starts_with($key, 'footer.');
+        return in_array($key, self::EDITABLE, true)
+            || str_starts_with($key, 'footer.')
+            || str_starts_with($key, 'db.');
     }
 
     private static ?array $all = null;

@@ -104,6 +104,10 @@ class AdminController
         // Database tab posted by the admin form.
         if (isset($in['f_db'])) {
             $out['db.enabled'] = isset($in['f_db_enabled']) ? '1' : '0';
+            if (array_key_exists('db2_dir', $in)) {
+                $v = trim((string) $in['db2_dir']);
+                $out['db.db2_dir'] = $v === '' ? null : substr($v, 0, 255);
+            }
         }
 
         // API callers may pass footer.*/db.* keys directly.
@@ -111,7 +115,10 @@ class AdminController
             if (!str_starts_with($k, 'footer.') && !str_starts_with($k, 'db.')) {
                 continue;
             }
-            if (str_ends_with($k, '.title') || preg_match('#^footer\.social\..+#', $k)) {
+            if ($k === 'db.db2_dir') {
+                $v = trim((string) $v);
+                $out[$k] = $v === '' ? null : substr($v, 0, 255);
+            } elseif (str_ends_with($k, '.title') || preg_match('#^footer\.social\..+#', $k)) {
                 $v = trim((string) $v);
                 $out[$k] = $v === '' ? null : substr($v, 0, 255);
             } else {

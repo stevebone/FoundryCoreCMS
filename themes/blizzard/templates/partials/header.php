@@ -8,7 +8,7 @@
             <nav class="bar-top-nav">
                 <a href="<?= url('/#games') ?>"><?= t('nav.games') ?></a>
                 <a href="<?= url('/#shop') ?>"><?= t('nav.shop') ?></a>
-                <a href="<?= url('/#news') ?>"><?= t('nav.news') ?></a>
+                <a href="<?= url('/news') ?>"><?= t('nav.news') ?></a>
                 <a href="<?= url('/#support') ?>"><?= t('nav.support') ?></a>
             </nav>
             <div class="bar-top-right">
@@ -21,6 +21,7 @@
                         <div class="account-menu dropdown-menu">
                             <?php if (is_admin()): ?>
                                 <a href="<?= url('/admin/settings') ?>"><?= t('admin.site_settings') ?></a>
+                                <a href="<?= url('/admin/dbtool') ?>"><?= t('nav.db_tool') ?></a>
                             <?php endif; ?>
                             <a href="<?= url('/admin/gm') ?>"><?= t('admin.gm_tool') ?></a>
                         </div>
@@ -65,9 +66,26 @@
             <a class="game-logo" href="<?= url('/') ?>"><?= e(config('app.name')) ?></a>
             <nav class="game-nav">
                 <a href="<?= url('/') ?>"><?= t('nav.home') ?></a>
-                <a href="<?= url('/#editions') ?>"><?= t('nav.game_info') ?></a>
-                <a href="<?= url('/#news') ?>"><?= t('nav.news') ?></a>
-                <a href="<?= url('/#forums') ?>"><?= t('nav.forums') ?></a>
+                <div class="dropdown nav-dropdown">
+                    <button type="button" class="dropdown-btn nav-drop-btn" aria-haspopup="true">
+                        <?= t('nav.game_info') ?> &#9662;
+                    </button>
+                    <div class="dropdown-menu nav-menu">
+                        <a href="<?= url('/#editions') ?>"><?= t('nav.editions') ?></a>
+                        <a href="<?= url('/news') ?>"><?= t('nav.news') ?></a>
+                    </div>
+                </div>
+                <a href="<?= url('/armory') ?>"><?= t('nav.armory') ?></a>
+                <div class="dropdown nav-dropdown">
+                    <button type="button" class="dropdown-btn nav-drop-btn" aria-haspopup="true">
+                        <?= t('nav.community') ?> &#9662;
+                    </button>
+                    <div class="dropdown-menu nav-menu">
+                        <a href="<?= url('/guilds') ?>"><?= t('nav.guilds') ?></a>
+                        <a href="<?= url('/forums') ?>"><?= t('nav.forums') ?></a>
+                        <a href="<?= url('/leaderboards') ?>"><?= t('nav.leaderboards') ?></a>
+                    </div>
+                </div>
                 <?php if (App\Core\Database::allowed()): ?>
                     <div class="dropdown nav-dropdown">
                         <button type="button" class="dropdown-btn nav-drop-btn" aria-haspopup="true">

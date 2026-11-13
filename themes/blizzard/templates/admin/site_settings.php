@@ -113,20 +113,63 @@
                 </form>
             </div>
         <?php elseif ($tab === 'database'): ?>
-            <div class="admin-card slim">
-                <form method="post" action="<?= url('/admin/settings') ?>" class="auth-form">
-                    <input type="hidden" name="f_db" value="1">
+            <div class="admin-grid-2">
+                <div class="admin-card">
+                    <h2 class="admin-section-title admin-section-first"><?= t('admin.db_browsing') ?></h2>
+                    <form method="post" action="<?= url('/admin/settings') ?>" class="auth-form">
+                        <input type="hidden" name="f_db" value="1">
+                        <label class="check-row">
+                            <input type="checkbox" name="f_db_enabled"
+                                   <?= App\Core\Database::enabled() ? 'checked' : '' ?>>
+                            <span><?= t('admin.db_enable') ?></span>
+                        </label>
+                        <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.save') ?></button>
+                    </form>
+                </div>
 
-                    <h2 class="admin-section-title admin-section-first"><?= t('admin.tab_database') ?></h2>
-                    <label class="check-row">
-                        <input type="checkbox" name="f_db_enabled"
-                               <?= App\Core\Database::enabled() ? 'checked' : '' ?>>
-                        <span><?= t('admin.db_enable') ?></span>
-                    </label>
+                <div class="admin-card">
+                    <h2 class="admin-section-title admin-section-first"><?= t('admin.db2_import') ?></h2>
+                    <form method="post" action="<?= url('/admin/db2-import') ?>" class="auth-form">
+                        <label class="auth-label" for="db2_dir"><?= t('admin.db2_dir') ?></label>
+                        <input class="auth-input" type="text" id="db2_dir" name="db2_dir"
+                               maxlength="255" placeholder="tools/db2csv"
+                               value="<?= e(App\Core\SiteSettings::get('db.db2_dir') ?? 'tools/db2csv') ?>">
+                        <p class="admin-help"><?= t('admin.db2_dir_help') ?></p>
 
-                    <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.save') ?></button>
-                </form>
+                        <label class="auth-label" for="db2_tables"><?= t('admin.db2_tables') ?></label>
+                        <input class="auth-input" type="text" id="db2_tables" name="db2_tables"
+                               maxlength="255" placeholder="ItemSparse, SpellName">
+                        <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.db2_run') ?></button>
+                    </form>
+                </div>
+
+                <div class="admin-card">
+                    <h2 class="admin-section-title admin-section-first"><?= t('admin.db2_fetch') ?></h2>
+                    <form method="post" action="<?= url('/admin/db2-fetch') ?>" class="auth-form">
+                        <label class="auth-label" for="db2_build"><?= t('admin.db2_build') ?></label>
+                        <input class="auth-input" type="text" id="db2_build" name="db2_build"
+                               maxlength="32" placeholder="12.1.7.70740" required
+                               value="<?= e(App\Core\SiteSettings::get('db.db2_build') ?? '') ?>">
+                        <p class="admin-help"><?= t('admin.db2_build_help') ?></p>
+
+                        <label class="auth-label" for="db2_fetch_tables"><?= t('admin.db2_tables') ?></label>
+                        <input class="auth-input" type="text" id="db2_fetch_tables" name="db2_tables"
+                               maxlength="255" placeholder="ItemSparse, SpellName">
+                        <button class="btn btn-gold btn-lg auth-submit" type="submit"><?= t('admin.db2_fetch_run') ?></button>
+                    </form>
+                </div>
             </div>
+
+            <?php if ($imp = ($_SESSION['db2_import'] ?? null)): unset($_SESSION['db2_import']); ?>
+                <div class="admin-card db2-result">
+                    <?php if ((int) $imp['code'] === 0): ?>
+                        <div class="settings-notice"><?= t('admin.db2_done') ?></div>
+                    <?php else: ?>
+                        <div class="auth-error"><?= t('admin.db2_failed') ?></div>
+                    <?php endif; ?>
+                    <pre class="db2-out"><?= e($imp['output']) ?></pre>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="admin-card">
                 <form method="post" action="<?= url('/admin/settings') ?>" class="auth-form">

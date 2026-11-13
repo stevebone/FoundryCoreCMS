@@ -126,6 +126,78 @@ $router->get('/armory', function () {
     ]);
 });
 
+// Community
+$router->get('/guilds', function () {
+    Theme::render('guilds', [
+        'title' => t('guild.title'),
+        'guilds' => App\Core\Guild::guilds(),
+        'realm' => implode(' / ', array_column(App\Core\Armory::realms(), 'name')),
+    ]);
+});
+
+$router->get('/guild/{id}', function (array $p) {
+    $d = App\Core\Guild::detail((int) $p['id']);
+    if (!$d) {
+        Theme::render('404', ['title' => '404'], 404);
+        return;
+    }
+    Theme::render('guild', [
+        'title' => $d['guild']['name'],
+        'd' => $d,
+        'realm' => implode(' / ', array_column(App\Core\Armory::realms(), 'name')),
+        'perks' => App\Core\Guild::perks(),
+        'ach' => App\Core\Guild::achievementStats((int) $d['guild']['guildid']),
+        'achievements' => App\Core\Guild::achievements((int) $d['guild']['guildid']),
+    ]);
+});
+
+$router->get('/forums', fn() => Theme::render('stub', ['title' => t('nav.forums'), 'heading' => t('nav.forums')]));
+$router->get('/leaderboards', fn() => Theme::render('stub', ['title' => t('nav.leaderboards'), 'heading' => t('nav.leaderboards')]));
+
+// News
+$router->get('/news', function () {
+    Theme::render('news', [
+        'title' => t('news.title'),
+        'result' => App\Core\News::page((int) ($_GET['page'] ?? 1)),
+        'canWrite' => user_level() >= 2,
+    ]);
+});
+
+$router->get('/news/{id}', function (array $p) {
+    $article = App\Core\News::get((int) $p['id']);
+    if (!$article) {
+        Theme::render('404', ['title' => '404'], 404);
+        return;
+    }
+    Theme::render('news_item', ['title' => $article['title'], 'a' => $article]);
+});
+
+$router->get('/news/new', function () {
+    if (user_level() < 2) {
+        header('Location: /news');
+        return;
+    }
+    Theme::render('news_edit', [
+        'title' => t('news.new'),
+        'tags' => App\Core\News::tags(),
+        'old' => $_POST,
+    ]);
+});
+
+$router->post('/news/new', function () {
+    $u = AuthService::user();
+    if (!$u || user_level() < 2) {
+        header('Location: /news');
+        return;
+    }
+    $id = App\Core\News::create($_POST, (int) $u['id']);
+    if (!$id) {
+        header('Location: /news/new');
+        return;
+    }
+    header('Location: /news/' . $id);
+});
+
 $router->get('/settings', function () {
     $u = AuthService::user();
     if (!$u) {
@@ -211,6 +283,68 @@ $router->post('/admin/settings', function () use ($adminGuard) {
     $tab = isset($_POST['f_footer']) ? 'footer'
         : (isset($_POST['f_db']) ? 'database' : 'main');
     header("Location: /admin/settings?tab={$tab}&saved=1");
+});
+
+$router->get('/admin/dbtool', function () use ($adminGuard) {
+    if (!$adminGuard(3)) {
+        return;
+    }
+    Theme::render('stub', ['title' => t('nav.db_tool'), 'heading' => t('nav.db_tool')]);
+});
+
+// Relative paths resolve against the site root (e.g. tools/db2csv).
+$db2ResolveDir = static function (string $dir): string {
+    $dir = trim($dir);
+    if ($dir !== '' && !preg_match('#^([a-zA-Z]:[\\\\/]|/|\\\\\\\\)#', $dir)) {
+        $dir = WEB_DIR . '/' . $dir;
+    }
+    return $dir;
+};
+
+$router->post('/admin/db2-import', function () use ($adminGuard, $db2ResolveDir) {
+    if (!$adminGuard(3)) {
+        return;
+    }
+    $posted = trim((string) ($_POST['db2_dir'] ?? ''));
+    App\Core\SiteSettings::save(['db.db2_dir' => $posted === '' ? null : substr($posted, 0, 255)]);
+    $dir = $db2ResolveDir($posted);
+    if ($dir === '' || !is_dir($dir)) {
+        $_SESSION['db2_import'] = ['code' => -1, 'output' => t('admin.db2_missing_dir')];
+        header('Location: /admin/settings?tab=database');
+        return;
+    }
+    $tables = trim((string) ($_POST['db2_tables'] ?? ''));
+    $tables = preg_match('/^[\w]+(,[\w]+)*$/', $tables) ? $tables : '';
+    $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(WEB_DIR . '/tools/import_db2_csv.php')
+        . ' ' . escapeshellarg($dir) . ($tables !== '' ? ' ' . escapeshellarg($tables) : '') . ' 2>&1';
+    set_time_limit(0);
+    exec($cmd, $out, $code);
+    $_SESSION['db2_import'] = ['code' => $code, 'output' => implode("\n", $out)];
+    header('Location: /admin/settings?tab=database');
+});
+
+$router->post('/admin/db2-fetch', function () use ($adminGuard, $db2ResolveDir) {
+    if (!$adminGuard(3)) {
+        return;
+    }
+    $build = trim((string) ($_POST['db2_build'] ?? ''));
+    if (!preg_match('/^\d+\.\d+\.\d+\.\d+$/', $build)) {
+        $_SESSION['db2_import'] = ['code' => -1, 'output' => t('admin.db2_bad_build')];
+        header('Location: /admin/settings?tab=database');
+        return;
+    }
+    App\Core\SiteSettings::save(['db.db2_build' => $build]);
+    $dir = (string) App\Core\SiteSettings::get('db.db2_dir');
+    $dir = $db2ResolveDir($dir === '' ? 'tools/db2csv' : $dir);
+    $tables = trim((string) ($_POST['db2_tables'] ?? ''));
+    $tables = preg_match('/^[\w]+(,[\w]+)*$/', $tables) ? $tables : '';
+    $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(WEB_DIR . '/tools/fetch_db2_csv.php')
+        . ' ' . escapeshellarg($dir) . ' ' . escapeshellarg($build)
+        . ($tables !== '' ? ' ' . escapeshellarg($tables) : '') . ' 2>&1';
+    set_time_limit(0);
+    exec($cmd, $out, $code);
+    $_SESSION['db2_import'] = ['code' => $code, 'output' => implode("\n", $out)];
+    header('Location: /admin/settings?tab=database');
 });
 
 $router->get('/admin/gm', function () use ($adminGuard) {
@@ -353,5 +487,7 @@ $router->get('/api/db/quest', [App\Api\DbController::class, 'quest']);
 $router->get('/api/db/item-names', [App\Api\DbController::class, 'itemNames']);
 $router->get('/api/db/zones', [App\Api\DbController::class, 'zones']);
 $router->get('/api/db/quest-names', [App\Api\DbController::class, 'questNames']);
+$router->post('/api/news/preview', [App\Api\NewsController::class, 'preview']);
+$router->post('/api/news/image', [App\Api\NewsController::class, 'image']);
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

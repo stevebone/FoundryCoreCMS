@@ -55,39 +55,38 @@
     </div>
 </section>
 
+<?php $newsItems = App\Core\News::latest(4); ?>
+<?php if ($newsItems): ?>
 <section class="news" id="news">
     <div class="container">
         <div class="section-head">
             <h2 class="section-title"><?= t('news.title') ?></h2>
-            <a class="link-more" href="#"><?= t('news.all') ?></a>
+            <a class="link-more" href="<?= url('/news') ?>"><?= t('news.all') ?></a>
         </div>
         <div class="news-grid">
+            <?php $featured = array_shift($newsItems); ?>
             <article class="news-featured">
-                <div class="news-art"></div>
+                <a class="news-art<?= $featured['image'] ? ' has-img' : '' ?>" href="<?= url('/news/' . (int) $featured['id']) ?>"
+                   <?php if ($featured['image']): ?>style="--img:url('<?= e($featured['image']) ?>')"<?php endif; ?>></a>
                 <div class="news-body">
-                    <span class="tag"><?= t('news.tag_update') ?></span>
-                    <h3><?= t('news.featured_title') ?></h3>
-                    <p><?= t('news.featured_text') ?></p>
-                    <a class="link-more" href="#"><?= t('news.read') ?></a>
+                    <span class="tag"><?= e($featured['tag']) ?></span>
+                    <h3><a href="<?= url('/news/' . (int) $featured['id']) ?>"><?= e($featured['title']) ?></a></h3>
+                    <p><?= e($featured['short_desc']) ?></p>
+                    <a class="link-more" href="<?= url('/news/' . (int) $featured['id']) ?>"><?= t('news.read') ?></a>
                 </div>
             </article>
             <div class="news-side">
-                <a class="news-item" href="#">
-                    <span class="tag tag-sm"><?= t('news.tag_hotfix') ?></span>
-                    <span class="news-item-title"><?= t('news.item1') ?></span>
-                </a>
-                <a class="news-item" href="#">
-                    <span class="tag tag-sm"><?= t('news.tag_update') ?></span>
-                    <span class="news-item-title"><?= t('news.item2') ?></span>
-                </a>
-                <a class="news-item" href="#">
-                    <span class="tag tag-sm"><?= t('news.tag_update') ?></span>
-                    <span class="news-item-title"><?= t('news.item3') ?></span>
-                </a>
+                <?php foreach ($newsItems as $n): ?>
+                    <a class="news-item" href="<?= url('/news/' . (int) $n['id']) ?>">
+                        <span class="tag tag-sm"><?= e($n['tag']) ?></span>
+                        <span class="news-item-title"><?= e($n['title']) ?></span>
+                    </a>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <section class="cta-tiles" id="cta">
     <div class="container tile-grid">

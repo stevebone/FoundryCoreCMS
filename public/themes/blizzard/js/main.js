@@ -387,10 +387,31 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches
-        && e.target.matches('[data-map-zoom]')) {
+        && e.target.matches('[data-map-zoom], [data-perks-modal]')) {
         e.preventDefault();
         e.target.click();
     }
+});
+
+// Guild perks box: click -> modal with the full perk list (hidden markup in page).
+document.addEventListener('click', function (e) {
+    const box = e.target.closest('[data-perks-modal]');
+    if (!box) return;
+    const src = box.parentElement.querySelector('.guild-perks-all');
+    if (!src) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'db-map-modal';
+    overlay.innerHTML = '<div class="db-map-modal-box guild-perks-modal">'
+        + '<button type="button" class="db-map-close" aria-label="Close">&times;</button>'
+        + src.innerHTML
+        + '</div>';
+    const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = ev => { if (ev.key === 'Escape') close(); };
+    overlay.addEventListener('click', ev => {
+        if (ev.target === overlay || ev.target.closest('.db-map-close')) close();
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
 });
 
 // DB pages: "+ Add filter" style buttons toggle a panel via data-panel="#id"
@@ -429,6 +450,75 @@ document.addEventListener('change', function (e) {
     img.src = sel.value ? sel.dataset.base + sel.value : sel.dataset.fallback;
 });
 
+// News editor: markdown toolbar, live preview, image upload.
+(function () {
+    const form = document.querySelector('[data-md-editor]');
+    if (!form) return;
+    const body = form.querySelector('#newsBody');
+    const preview = form.querySelector('#mdPreview');
+    const file = form.querySelector('#mdFile');
+    const cover = form.querySelector('#newsCover');
+    let uploadFor = 'body';
+
+    const insert = (before, after) => {
+        const s = body.selectionStart, e2 = body.selectionEnd;
+        const sel = body.value.slice(s, e2);
+        body.setRangeText(before + sel + after, s, e2, 'end');
+        body.focus();
+        body.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const ops = {
+        bold: () => insert('**', '**'), italic: () => insert('*', '*'),
+        h2: () => insert('## ', ''), h3: () => insert('### ', ''),
+        link: () => insert('[', '](https://)'),
+        ul: () => insert('- ', ''), ol: () => insert('1. ', ''),
+        quote: () => insert('> ', ''), hr: () => insert('\n---\n', ''),
+    };
+
+    form.addEventListener('click', function (e) {
+        const tool = e.target.closest('[data-md]');
+        if (tool) { ops[tool.dataset.md] && ops[tool.dataset.md](); return; }
+        const up = e.target.closest('[data-md-upload]');
+        if (up) { uploadFor = up.dataset.mdUpload; file.value = ''; file.click(); }
+    });
+
+    let timer = null;
+    const renderPreview = () => {
+        const fd = new FormData();
+        fd.append('body', body.value);
+        fetch('/api/news/preview', { method: 'POST', body: fd })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => { if (j && j.data) preview.innerHTML = j.data.html; })
+            .catch(() => {});
+    };
+    body.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(renderPreview, 400);
+    });
+    renderPreview();
+
+    file.addEventListener('change', function () {
+        if (!file.files.length) return;
+        const fd = new FormData();
+        fd.append('image', file.files[0]);
+        fetch('/api/news/image', { method: 'POST', body: fd })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => {
+                const url = j && j.data && j.data.url;
+                if (!url) return;
+                if (uploadFor === 'cover') {
+                    cover.value = url;
+                } else {
+                    body.setRangeText('![image](' + url + ')',
+                        body.selectionStart, body.selectionEnd, 'end');
+                    body.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            })
+            .catch(() => {});
+    });
+})();
+
 // DB item page: Copy Link button
 document.addEventListener('click', function (e) {
     const btn = e.target.closest('[data-copy]');
@@ -444,3 +534,58 @@ document.addEventListener('click', function (e) {
         done();
     }
 });
+
+// Sortable tables + client-side row filter (guild roster etc.)
+// th[data-key] sorts by that column's td[data-v]; input[data-filter] hides
+// non-matching rows of the target tbody.
+(function () {
+    const norm = v => (v || '').toLowerCase();
+    const isNum = v => v !== '' && !isNaN(v);
+
+    document.querySelectorAll('table[data-sortable]').forEach(table => {
+        const tbody = table.tBodies[0];
+        if (!tbody) return;
+        table.querySelectorAll('th[data-key]').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = +th.dataset.key;
+                const asc = !th.classList.contains('sorted-asc');
+                table.querySelectorAll('th[data-key]').forEach(h =>
+                    h.classList.remove('sorted-asc', 'sorted-desc'));
+                th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+                [...tbody.rows].sort((a, b) => {
+                    const av = a.cells[col] ? a.cells[col].dataset.v ?? a.cells[col].textContent : '';
+                    const bv = b.cells[col] ? b.cells[col].dataset.v ?? b.cells[col].textContent : '';
+                    const cmp = isNum(av) && isNum(bv)
+                        ? +av - +bv
+                        : norm(av).localeCompare(norm(bv));
+                    return asc ? cmp : -cmp;
+                }).forEach(r => tbody.appendChild(r));
+            });
+        });
+    });
+
+    document.querySelectorAll('input[data-filter]').forEach(input => {
+        const tbody = document.querySelector(input.dataset.filter);
+        if (!tbody) return;
+        input.addEventListener('input', () => {
+            const q = norm(input.value.trim());
+            [...tbody.rows].forEach(r => {
+                r.hidden = q !== '' && !norm(r.textContent).includes(q);
+            });
+        });
+    });
+})();
+
+// Simple tab bars: button[data-tab] toggles sibling .guild-tabpanel targets.
+(function () {
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const scope = btn.closest('.guild-tabs');
+            if (!scope) return;
+            scope.querySelectorAll('[data-tab]').forEach(b =>
+                b.classList.toggle('active', b === btn));
+            scope.parentElement.querySelectorAll('.guild-tabpanel').forEach(p =>
+                p.classList.toggle('is-hidden', ('#' + p.id) !== btn.dataset.tab));
+        });
+    });
+})();

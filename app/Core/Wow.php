@@ -182,4 +182,31 @@ class Wow
     {
         return $fdid ? self::ICON_BASE . $fdid . '.webp' : null;
     }
+
+    /**
+     * Playable-race faction sets (RaceMask.h: RACEMASK_ALLIANCE/HORDE/NEUTRAL).
+     * Values: 'alliance' | 'horde' | 'neutral'.
+     */
+    public const RACE_ALLIANCE = [1, 3, 4, 7, 11, 22, 25, 29, 30, 32, 34, 37, 52, 85, 86];
+    public const RACE_HORDE = [2, 5, 6, 8, 9, 10, 26, 27, 28, 31, 35, 36, 70, 84, 91];
+
+    public static function raceFaction(int $race): string
+    {
+        if (in_array($race, self::RACE_ALLIANCE, true)) {
+            return 'alliance';
+        }
+        if (in_array($race, self::RACE_HORDE, true)) {
+            return 'horde';
+        }
+        return 'neutral';
+    }
+
+    /** Class id -> official UI color hex (for roster-style name coloring). */
+    public const CLASS_COLORS = [
+        1 => '#C79C6E', 2 => '#F58CBA', 3 => '#ABD473', 4 => '#FFF569',
+        5 => '#FFFFFF', 6 => '#C41F3B', 7 => '#0070DE', 8 => '#69CCF0',
+        9 => '#9482C9', 10 => '#00FF96', 11 => '#FF7D0A', 12 => '#A330C9',
+        13 => '#33937F',
+    ];
+
 }

@@ -1,0 +1,14 @@
+-- CMS news articles for the News page and homepage Latest Updates.
+CREATE TABLE IF NOT EXISTS cms_news (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    tag VARCHAR(64) NOT NULL DEFAULT 'Update',
+    short_desc VARCHAR(512) NOT NULL DEFAULT '',
+    long_desc MEDIUMTEXT NOT NULL,
+    image VARCHAR(255) DEFAULT NULL,
+    author_id INT UNSIGNED DEFAULT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

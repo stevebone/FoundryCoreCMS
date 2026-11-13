@@ -20,52 +20,17 @@ if (!$dir || !is_dir($dir)) {
     exit(1);
 }
 
-// Whitelisted db2 files -> cms table names.
-const TABLES = [
-    'ItemSparse'            => 'item_sparse',
-    'Item'                  => 'item',
-    'ItemClass'             => 'item_class',
-    'ItemSubClass'          => 'item_sub_class',
-    'ItemSearchName'        => 'item_search_name',
-    'ItemAppearance'        => 'item_appearance',
-    'ItemModifiedAppearance' => 'item_modified_appearance',
-    'ItemEffect'            => 'item_effect',
-    'ItemXItemEffect'       => 'item_x_item_effect',
-    'ItemNameDescription'   => 'item_name_description',
-    'ItemDamageOneHand'     => 'item_damage_one_hand',
-    'ItemDamageTwoHand'     => 'item_damage_two_hand',
-    'ItemDamageOneHandCaster' => 'item_damage_one_hand_caster',
-    'ItemDamageTwoHandCaster' => 'item_damage_two_hand_caster',
-    'ItemDamageRanged'      => 'item_damage_ranged',
-    'ItemDamageThrown'      => 'item_damage_thrown',
-    'ItemDamageWand'        => 'item_damage_wand',
-    'ItemArmorQuality'      => 'item_armor_quality',
-    'ItemArmorShield'       => 'item_armor_shield',
-    'ItemArmorTotal'        => 'item_armor_total',
-    'ItemSet'               => 'item_set',
-    'ItemSetSpell'          => 'item_set_spell',
-    'GemProperties'         => 'gem_properties',
-    'SpellName'             => 'spell_name',
-    'Spell'                 => 'spell',
-    'ChrRaces'              => 'chr_races',
-    'ChrClasses'            => 'chr_classes',
-    'CharTitles'            => 'char_titles',
-    'AreaTable'             => 'area_table',
-    'QuestSort'             => 'quest_sort',
-    'QuestInfo'             => 'quest_info',
-    'ContentTuning'         => 'content_tuning',
-    'Faction'               => 'faction',
-    'QuestXP'               => 'quest_xp',
-    'UiMap'                 => 'ui_map',
-    'UiMapAssignment'       => 'ui_map_assignment',
-    'FactionTemplate'       => 'faction_template',
-];
+// Whitelisted db2 files -> cms table names (shared with fetch_db2_csv.php).
+$TABLES = require __DIR__ . '/db2_tables.php';
 
 // Non-ID columns the app filters/joins on (added after import alongside the PK).
 const EXTRA_INDEXES = [
     'item_modified_appearance' => 'ADD INDEX idx_ima_item (ItemID, ItemAppearanceModifierID)',
     'item_sub_class'           => 'ADD INDEX idx_isc_lookup (ClassID, SubClassID)',
     'item_class'               => 'ADD INDEX idx_ic_class (ClassID)',
+    'guild_emblem'             => 'ADD INDEX idx_ge_emblem (EmblemID)',
+    'spell_misc'               => 'ADD INDEX idx_sm_spell (SpellID)',
+    'spell_effect'             => 'ADD INDEX idx_se_spell (SpellID, EffectIndex)',
 ];
 
 // Optional second arg: only import these db2 table names (comma-separated).
@@ -112,7 +77,7 @@ foreach (glob(rtrim($dir, '/\\') . '/*.csv') as $file) {
     if (str_contains($base, '(1)') || !preg_match('/^(\w+)\.([\d.]+)\.csv$/', $base, $m)) {
         continue; // duplicate downloads / artifacts
     }
-    $table = TABLES[$m[1]] ?? null;
+    $table = $TABLES[$m[1]] ?? null;
     if ($table === null || ($only !== null && !isset($only[$m[1]]))) {
         $skipped++;
         continue;
